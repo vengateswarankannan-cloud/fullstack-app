@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="card wide">
+    <div class="topbar">
+      <h1>Dashboard</h1>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span class="user-pill">{{ user_name }}</span>
+        <a href="{{ url_for('logout') }}" class="btn btn-secondary" style="width:auto; padding:6px 14px; margin:0;">Logout</a>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, msg in messages %}
+          <div class="flash {{ category }}">{{ msg }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="section">
+      <h2>Download a test file</h2>
+      <a href="{{ url_for('download_test_file') }}" class="btn" style="display:inline-block; width:auto; padding:10px 20px;">Download Sample File</a>
+    </div>
+
+    <div class="section">
+      <h2>Upload files</h2>
+      <p class="hint" style="margin-bottom:12px;">Allowed types: PDF, PNG, JPEG. Max size: 5 MB per request.</p>
+      <form method="POST" action="{{ url_for('upload_files') }}" enctype="multipart/form-data">
+        <div class="grid-2">
+          <div class="form-group">
+            <label>File 1</label>
+            <input type="file" name="file1" accept=".pdf,.png,.jpg,.jpeg">
+          </div>
+          <div class="form-group">
+            <label>File 2</label>
+            <input type="file" name="file2" accept=".pdf,.png,.jpg,.jpeg">
+          </div>
+        </div>
+        <button type="submit">Upload</button>
+      </form>
+    </div>
+
+    <div class="section">
+      <h2>Your uploaded files</h2>
+      {% if files %}
+      <table>
+        <thead>
+          <tr>
+            <th>Filename</th>
+            <th>Type</th>
+            <th>Uploaded At</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in files %}
+          <tr>
+            <td>{{ f.filename }}</td>
+            <td><span class="badge">{{ f.file_type }}</span></td>
+            <td>{{ f.upload_time }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <div class="empty-state">No files uploaded yet.</div>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>
