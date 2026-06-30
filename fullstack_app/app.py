@@ -6,6 +6,7 @@ Handles: Sign-Up, Login, Dashboard, File Upload, File Download
 
 import os
 import re
+import urllib.parse  # Added to safely encode the password containing '@'
 from datetime import datetime
 from functools import wraps
 
@@ -27,9 +28,14 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "dev-secret-key")
 
+# Database configurations with fallback values
 DB_HOST = os.getenv("MYSQL_HOST", "localhost")
 DB_USER = os.getenv("MYSQL_USER", "root")
-DB_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
+
+# Automatically handles 'vengat@123' or whatever password is provided
+raw_password = os.getenv("MYSQL_PASSWORD", "vengat@123")
+DB_PASSWORD = urllib.parse.quote_plus(raw_password) 
+
 DB_NAME = os.getenv("MYSQL_DB", "fullstack_app")
 DB_PORT = int(os.getenv("MYSQL_PORT", 3306))
 
@@ -39,7 +45,7 @@ def get_db_connection():
     return pymysql.connect(
         host=DB_HOST,
         user=DB_USER,
-        password=DB_PASSWORD,
+        password=raw_password, # PyMySQL connection uses raw string directly
         database=DB_NAME,
         port=DB_PORT,
         cursorclass=pymysql.cursors.DictCursor,
@@ -139,8 +145,13 @@ def signup():
             flash("Passwords do not match.", "error")
             return redirect(url_for("signup"))
 
-        conn = get_db_connection()
-        cur = conn.cursor()
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+        except Exception as db_err:
+            flash(f"Database Connection Failed! Make sure MySQL is started. Error: {str(db_err)}", "error")
+            return redirect(url_for("signup"))
+
         try:
             # Check duplicates
             cur.execute(
@@ -184,12 +195,16 @@ def login():
             flash("Email and password are required.", "error")
             return redirect(url_for("login"))
 
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT * FROM users WHERE email = %s", (email,))
-        user = cur.fetchone()
-        cur.close()
-        conn.close()
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM users WHERE email = %s", (email,))
+            user = cur.fetchone()
+            cur.close()
+            conn.close()
+        except Exception as db_err:
+            flash(f"Database Connection Failed: {str(db_err)}", "error")
+            return redirect(url_for("login"))
 
         if user and check_password_hash(user["password_hash"], password):
             session["user_id"] = user["id"]
